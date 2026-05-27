@@ -8,7 +8,7 @@ bool parse_first_command(int argc, char **argv)
 		std::cerr << "Usage: ./ircserv <port> <password>" << std::endl;
 		return false;
 	}
-	for (int i = 0; i < strlen(argv[1]); i++)
+	for (size_t i = 0; i < strlen(argv[1]); i++)
 	{
 		if (i == 0 && (argv[1][i] == '-' || argv[1][i] == '+'))
 			continue;
@@ -33,5 +33,14 @@ int main(int argc, char **argv)
 	int _port = atoi(argv[1]);
 	std::string _password =  argv[2];
 	Server server(_port, _password);
-	
+	try
+	{
+		server.init();
+		server.run();
+	}
+	catch (std::exception &e)
+	{
+		std::cerr << e.what() << std::endl;
+		return (1);
+	}
 }
