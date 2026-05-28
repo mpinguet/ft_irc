@@ -15,22 +15,29 @@ Server::~Server()
 
 void Server::init()
 {
-	this->server_fd = socket(AF_INET, SOCK_STREAM, 0);
+	this->server_fd = socket(AF_INET, SOCK_STREAM, 0); // socket(AdressFromTheInternet(IPV4), TCP/IP)
 	if (server_fd == -1)
 		throw (std::runtime_error("socket() failed"));
+
+	// If the server crash/been closed, the port can be reatribuate instantly
 	int opt = 1;
 	if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1)
 		throw (std::runtime_error("setsockopt() failed"));
+
+	// Disable the server to lock on 1 client (so it can listen on multiple clients)
 	if (fcntl(server_fd, F_SETFL, O_NONBLOCK) == -1)
 		throw (std::runtime_error("fcntl() failed"));
+
 	struct sockaddr_in addr;
 	memset(&addr, 0, sizeof(addr));
 	addr.sin_family      = AF_INET;
-	addr.sin_addr.s_addr = INADDR_ANY;
+	addr.sin_addr.s_addr = INADDR_ANY; //listen all ip
 	addr.sin_port        = htons(port);
+
+	//connect ip + port at the socket
 	if (bind(server_fd, (struct sockaddr*)&addr, sizeof(addr)) == -1)
 		throw (std::runtime_error("bind() failed"));
-	if (listen(server_fd, SOMAXCONN) == -1)
+	if (listen(server_fd, SOMAXCONN) == -1) //The maximum number of pending connection
     	throw std::runtime_error("listen() failed");
 	std::cout << "Server listening on port " << this->port << std::endl;
 }
@@ -38,6 +45,7 @@ void Server::init()
 void Server::run()
 {
 	std::vector<struct pollfd> fds;
+	static int client_nb = 0;
 
 	struct pollfd server_pollfd;
 	server_pollfd.fd = server_fd;
@@ -56,13 +64,18 @@ void Server::run()
 				{
 					int client_fd = accept(server_fd, NULL, NULL);
 					if (client_fd == -1)
-    					throw std::runtime_error("accept() failed");
+					{
+						// throw (std::runtime_error("accept() failed"));
+						std::cout << "accept() failed" << std::endl;
+    					continue;
+					}
+					client_nb++;
 					struct pollfd client_pollfd;
 					client_pollfd.fd = client_fd;
 					client_pollfd.events = POLLIN;
 					fcntl(client_fd, F_SETFL, O_NONBLOCK);
 					fds.push_back(client_pollfd);
-					std::cout << "New client connected: " << client_fd << std::endl;
+					std::cout << "New client #" << client_nb << " connected on " << client_fd << " fd" << std::endl;
 				}
 				else
 				{
@@ -79,10 +92,14 @@ void Server::run()
 					else if (byte > 0)
 					{
 						buff[byte] = '\0';
-						std::cout << "Received: " << buff << std::endl;
+						std::cout << "Received from client #" << i << ": " << buff << std::endl;
 					}
 					else
-						throw(std::runtime_error("recv() failed"));
+					{
+						// throw (std::runtime_error("recv() failed"));
+						std::cout << "recv() failed" << std::endl;
+    					continue;
+					}
 				}
 			}
 		}
