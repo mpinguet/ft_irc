@@ -14,13 +14,13 @@
 
 class Server
 {
-private:
-	int port;
-	std::string password;
-	int server_fd;
-public:
-	Server(int , std::string );
-	~Server();
-	void init();
-	void run();
+	private:
+		int port;
+		std::string password;
+		int server_fd;
+	public:
+		Server(int , std::string );
+		~Server();
+		void init();
+		void run();
 };

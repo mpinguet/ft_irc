@@ -1,7 +1,8 @@
 NAME = ircserv
 
-SOURCES = srcs/main.cpp \
-		srcs/Server.cpp
+SOURCES =	srcs/main.cpp \
+			srcs/Server.cpp \
+			srcs/Client.cpp \
 
 GCC = c++
 
