@@ -23,4 +23,10 @@ public:
 	~Server();
 	void init();
 	void run();
+	void newClient(int &client_nb, std::vector<struct pollfd> &fds, int client_fd);
+	void handleServerEvent(int &client_nb, std::vector<struct pollfd> &fds);
+	void handleClientEvent(std::vector<struct pollfd> &fds, size_t &index);
+	void handleDisconnection(std::vector<struct pollfd> &fds, size_t index);
+	void handleData(char *buff, int byte, int i);
+
 };

@@ -9,8 +9,8 @@ Server::Server(int _port, std::string _password)
 
 Server::~Server()
 {
-    if (server_fd != -1)
-        close(server_fd);
+	if (server_fd != -1)
+		close(server_fd);
 }
 
 void Server::init()
@@ -38,7 +38,7 @@ void Server::init()
 	if (bind(server_fd, (struct sockaddr*)&addr, sizeof(addr)) == -1)
 		throw (std::runtime_error("bind() failed"));
 	if (listen(server_fd, SOMAXCONN) == -1) //The maximum number of pending connection
-    	throw std::runtime_error("listen() failed");
+		throw std::runtime_error("listen() failed");
 	std::cout << "Server listening on port " << this->port << std::endl;
 }
 
@@ -61,47 +61,63 @@ void Server::run()
 			if (fds[i].revents & POLLIN)
 			{
 				if (fds[i].fd == server_fd)
-				{
-					int client_fd = accept(server_fd, NULL, NULL);
-					if (client_fd == -1)
-					{
-						// throw (std::runtime_error("accept() failed"));
-						std::cout << "accept() failed" << std::endl;
-    					continue;
-					}
-					client_nb++;
-					struct pollfd client_pollfd;
-					client_pollfd.fd = client_fd;
-					client_pollfd.events = POLLIN;
-					fcntl(client_fd, F_SETFL, O_NONBLOCK);
-					fds.push_back(client_pollfd);
-					std::cout << "New client #" << client_nb << " connected on " << client_fd << " fd" << std::endl;
-				}
+					handleServerEvent(client_nb, fds);
 				else
-				{
-					char buff[512];
-					int byte = recv(fds[i].fd, buff, sizeof(buff), 0);
-					if (byte == 0)
-					{
-						std::cout << "Deconnection of client #" << fds[i].fd << std::endl;
-						std::cout << "Client deleted. Total Client is now: " << fds.size() - 2 << std::endl;
-						close(fds[i].fd);
-						fds.erase(fds.begin() + i);
-						i--;
-					}
-					else if (byte > 0)
-					{
-						buff[byte] = '\0';
-						std::cout << "Received from client #" << i << ": " << buff << std::endl;
-					}
-					else
-					{
-						// throw (std::runtime_error("recv() failed"));
-						std::cout << "recv() failed" << std::endl;
-    					continue;
-					}
-				}
+					handleClientEvent(fds, i);
 			}
 		}
 	}
 }
+
+// ------ HANDLE SERVER EVENTS ------ \\.
+void Server::handleServerEvent(int &client_nb, std::vector<struct pollfd> &fds){
+	int client_fd = accept(server_fd, NULL, NULL);
+
+	if (client_fd == -1)
+	{
+		std::cout << "accept() failed" << std::endl;
+		return;
+	}
+	newClient(client_nb, fds, client_fd);
+}
+
+void Server::newClient(int &client_nb, std::vector<struct pollfd> &fds, int client_fd){
+	struct pollfd client_pollfd;
+	client_pollfd.fd = client_fd;
+	client_pollfd.events = POLLIN;
+	fcntl(client_fd, F_SETFL, O_NONBLOCK);
+	fds.push_back(client_pollfd);
+	client_nb++;
+	std::cout << "New client #" << client_nb << " connected on " << client_fd << " fd" << std::endl;
+}
+// ---------------------------------- \\.
+
+// ------ HANDLE CLIENT EVENT ------ \\.
+void Server::handleClientEvent(std::vector<struct pollfd> &fds, size_t &index){
+	char buff[512];
+	int byte = recv(fds[index].fd, buff, sizeof(buff), 0);
+
+	if (byte == 0)
+	{
+		handleDisconnection(fds, index);
+		--index;
+	}
+	else if (byte > 0)
+		handleData(buff, byte, index);
+	else
+		std::cout << "recv() failed" << std::endl;
+}
+
+void Server::handleDisconnection(std::vector<struct pollfd> &fds, size_t index){
+	std::cout << "Deconnection of client #" << fds[index].fd << std::endl;
+	std::cout << "Client deleted. Total Client is now: " << fds.size() - 2 << std::endl;
+	close(fds[index].fd);
+	fds.erase(fds.begin() + index);
+}
+
+void Server::handleData(char *buff, int byte, int i){
+	buff[byte] = '\0';
+	std::cout << "Received from client #" << i << ": " << buff << std::endl;
+}
+// ---------------------------------- \\.
+
