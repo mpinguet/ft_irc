@@ -30,9 +30,9 @@ void Server::init()
 
 	struct sockaddr_in addr;
 	memset(&addr, 0, sizeof(addr));
-	addr.sin_family      = AF_INET;
+	addr.sin_family	  = AF_INET;
 	addr.sin_addr.s_addr = INADDR_ANY; //listen all ip
-	addr.sin_port        = htons(port);
+	addr.sin_port		= htons(port);
 
 	//connect ip + port at the socket
 	if (bind(server_fd, (struct sockaddr*)&addr, sizeof(addr)) == -1)
@@ -88,7 +88,12 @@ void Server::newClient(int &client_nb, std::vector<struct pollfd> &fds, int clie
 	fcntl(client_fd, F_SETFL, O_NONBLOCK);
 	fds.push_back(client_pollfd);
 	client_nb++;
+	clients.insert(std::make_pair(client_fd, Client(client_fd))); // On ajoute le client à la map
 	std::cout << "New client #" << client_nb << " connected on " << client_fd << " fd" << std::endl;
+	sendMsg(client_fd, "Welcome! Please authenticate:\r\n");
+	sendMsg(client_fd, "  PASS <password>\r\n");
+	sendMsg(client_fd, "  NICK <nickname>\r\n");
+	sendMsg(client_fd, "  USER <username>\r\n");
 }
 // ---------------------------------- \\.
 
@@ -103,7 +108,7 @@ void Server::handleClientEvent(std::vector<struct pollfd> &fds, size_t &index){
 		--index;
 	}
 	else if (byte > 0)
-		handleData(buff, byte, index);
+		handleData(buff, byte, fds, index);
 	else
 		std::cout << "recv() failed" << std::endl;
 }
@@ -112,12 +117,121 @@ void Server::handleDisconnection(std::vector<struct pollfd> &fds, size_t index){
 	std::cout << "Deconnection of client #" << fds[index].fd << std::endl;
 	std::cout << "Client deleted. Total Client is now: " << fds.size() - 2 << std::endl;
 	close(fds[index].fd);
+	clients.erase(fds[index].fd);
 	fds.erase(fds.begin() + index);
 }
 
-void Server::handleData(char *buff, int byte, int i){
-	buff[byte] = '\0';
-	std::cout << "Received from client #" << i << ": " << buff << std::endl;
+// ----------------------------------
+
+void Server::handleData(char *buff, int byte, std::vector<struct pollfd> &fds, size_t index)
+{
+    buff[byte] = '\0';
+    std::cout << "Received from client fd=" << fds[index].fd << ": " << buff << std::endl;
+
+    std::map<int, Client>::iterator it = clients.find(fds[index].fd);
+    Client &client = it->second;
+    client.appendBuffer(buff);
+
+    size_t pos;
+    while (true)
+    {
+        pos = client.getBuffer().find("\r\n");
+        if (pos == std::string::npos)
+            pos = client.getBuffer().find("\n");
+        if (pos == std::string::npos)
+            break;
+
+        std::string line = client.getBuffer().substr(0, pos);
+        // +2 si \r\n, +1 si \n seul
+        size_t trim = (client.getBuffer()[pos] == '\r') ? pos + 2 : pos + 1;
+        client.trimBuffer(trim);
+        parseCommand(client, line);
+    }
 }
-// ---------------------------------- \\.
+
+void Server::parseCommand(Client &client, const std::string &line)
+{
+	if (line.empty())
+		return;
+
+	// Séparer commande et argument
+	std::string cmd, arg;
+	size_t space = line.find(' ');
+	if (space == std::string::npos)
+		cmd = line;
+	else
+	{
+		cmd = line.substr(0, space);
+		arg = line.substr(space + 1);
+	}
+
+	if (cmd == "PASS")
+		handlePass(client, arg);
+	else if (cmd == "NICK")
+		handleNick(client, arg);
+	else if (cmd == "USER")
+		handleUser(client, arg);
+	else
+	{
+		if (!client.isRegistered())
+			sendMsg(client.getFd(), "451 :You have not registered\r\n");
+	}
+}
+
+void Server::handlePass(Client &client, const std::string &arg)
+{
+	if (client.isRegistered())
+		return sendMsg(client.getFd(), "462 :You may not reregister\r\n");
+	if (arg.empty())
+		return sendMsg(client.getFd(), "461 PASS :Not enough parameters\r\n");
+
+	if (arg == this->password)
+		client.setPassOk(true);
+	else
+	{
+		sendMsg(client.getFd(), "464 :Password incorrect\r\n");
+		// On laisse trois chance ? Ou kick ?
+	}
+}
+
+void Server::handleNick(Client &client, const std::string &arg)
+{
+	if (!client.isPassOk())
+		return sendMsg(client.getFd(), "464 :Password required\r\n");
+	if (arg.empty())
+		return sendMsg(client.getFd(), "431 :No nickname given\r\n");
+
+	client.setNick(arg);
+	client.setNickOk(true);
+	sendMsg(client.getFd(), "NICK :" + arg + "\r\n");
+}
+
+void Server::handleUser(Client &client, const std::string &arg)
+{
+	if (!client.isPassOk())
+		return sendMsg(client.getFd(), "464 :Password required\r\n");
+	if (arg.empty())
+		return sendMsg(client.getFd(), "461 USER :Not enough parameters\r\n");
+
+	std::string username = arg.substr(0, arg.find(' '));
+	client.setUser(username);
+	client.setUserOk(true);
+
+	if (client.isRegistered())
+		sendWelcome(client);
+}
+
+void Server::sendWelcome(Client &client)
+{
+	std::string nick = client.getNick();
+	sendMsg(client.getFd(), "001 " + nick + " :Welcome to the IRC server " + nick + "\r\n");
+	sendMsg(client.getFd(), "002 " + nick + " :Your host is ircserv\r\n");
+	sendMsg(client.getFd(), "003 " + nick + " :This server was created today\r\n");
+}
+
+void Server::sendMsg(int fd, const std::string &msg)
+{
+	send(fd, msg.c_str(), msg.size(), 0);
+}
+
 
