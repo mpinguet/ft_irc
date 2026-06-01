@@ -91,9 +91,9 @@ void Server::newClient(int &client_nb, std::vector<struct pollfd> &fds, int clie
 	clients.insert(std::make_pair(client_fd, Client(client_fd))); // On ajoute le client à la map
 	std::cout << "New client #" << client_nb << " connected on " << client_fd << " fd" << std::endl;
 	sendMsg(client_fd, "Welcome! Please authenticate:\r\n");
-	sendMsg(client_fd, "  PASS <password>\r\n");
-	sendMsg(client_fd, "  NICK <nickname>\r\n");
-	sendMsg(client_fd, "  USER <username>\r\n");
+	sendMsg(client_fd, " PASS <password>\r\n");
+	sendMsg(client_fd, " NICK <nickname>\r\n");
+	sendMsg(client_fd, " USER <username>\r\n");
 }
 // ---------------------------------- \\.
 
@@ -125,28 +125,28 @@ void Server::handleDisconnection(std::vector<struct pollfd> &fds, size_t index){
 
 void Server::handleData(char *buff, int byte, std::vector<struct pollfd> &fds, size_t index)
 {
-    buff[byte] = '\0';
-    std::cout << "Received from client fd=" << fds[index].fd << ": " << buff << std::endl;
+	buff[byte] = '\0';
+	std::cout << "Received from client fd=" << fds[index].fd << ": " << buff << std::endl;
 
-    std::map<int, Client>::iterator it = clients.find(fds[index].fd);
-    Client &client = it->second;
-    client.appendBuffer(buff);
+	std::map<int, Client>::iterator it = clients.find(fds[index].fd);
+	Client &client = it->second;
+	client.appendBuffer(buff);
 
-    size_t pos;
-    while (true)
-    {
-        pos = client.getBuffer().find("\r\n");
-        if (pos == std::string::npos)
-            pos = client.getBuffer().find("\n");
-        if (pos == std::string::npos)
-            break;
+	size_t pos;
+	while (true)
+	{
+		pos = client.getBuffer().find("\r\n");
+		if (pos == std::string::npos)
+			pos = client.getBuffer().find("\n");
+		if (pos == std::string::npos)
+			break;
 
-        std::string line = client.getBuffer().substr(0, pos);
-        // +2 si \r\n, +1 si \n seul
-        size_t trim = (client.getBuffer()[pos] == '\r') ? pos + 2 : pos + 1;
-        client.trimBuffer(trim);
-        parseCommand(client, line);
-    }
+		std::string line = client.getBuffer().substr(0, pos);
+		// +2 si \r\n, +1 si \n seul
+		size_t trim = (client.getBuffer()[pos] == '\r') ? pos + 2 : pos + 1;
+		client.trimBuffer(trim);
+		parseCommand(client, line);
+	}
 }
 
 void Server::parseCommand(Client &client, const std::string &line)
@@ -201,10 +201,14 @@ void Server::handleNick(Client &client, const std::string &arg)
 	if (arg.empty())
 		return sendMsg(client.getFd(), "431 :No nickname given\r\n");
 
+	
+	
 	client.setNick(arg);
 	client.setNickOk(true);
 	sendMsg(client.getFd(), "NICK :" + arg + "\r\n");
 }
+//ERR_ERRONEUSNICKNAME (432), ERR_NICKNAMEINUSE (433), ERR_NICKCOLLISION (436)
+// 9 afficher max et unique
 
 void Server::handleUser(Client &client, const std::string &arg)
 {
@@ -235,3 +239,4 @@ void Server::sendMsg(int fd, const std::string &msg)
 }
 
 
+// est ce qu'on lance une erreur si le client envoie une commande avant de s'authentifier ? 

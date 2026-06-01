@@ -37,12 +37,12 @@ public:
 
 
 	// Parsing line 
-    void	parseCommand(Client &client, const std::string &line);
-    void	handlePass(Client &client, const std::string &arg);
-    void	handleNick(Client &client, const std::string &arg);
-    void	handleUser(Client &client, const std::string &arg);
+	void	parseCommand(Client &client, const std::string &line);
+	void	handlePass(Client &client, const std::string &arg);
+	void	handleNick(Client &client, const std::string &arg);
+	void	handleUser(Client &client, const std::string &arg);
 
 	void	sendWelcome(Client &client);
-    void	sendMsg(int fd, const std::string &msg);
+	void	sendMsg(int fd, const std::string &msg);
 
 };

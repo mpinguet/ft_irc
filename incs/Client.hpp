@@ -39,7 +39,7 @@ class Client
 
 		//parsing line
 		void appendBuffer(const std::string &data);
-    	void clearBuffer();
+		void clearBuffer();
 		void trimBuffer(size_t n);
 
 };
