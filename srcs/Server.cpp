@@ -201,14 +201,25 @@ void Server::handleNick(Client &client, const std::string &arg)
 	if (arg.empty())
 		return sendMsg(client.getFd(), "431 :No nickname given\r\n");
 
+	for (size_t i = 0; i < arg.size(); i++)
+	{
+		if (!isalnum(arg[i]) && arg[i] != '-' && arg[i] != '_')
+			return sendMsg(client.getFd(), "432 " + arg + " :Erroneous nickname\r\n");
+	} // Caractere valides
+
+	std::string nick = arg.substr(0, 9);
+
+	for (std::map<int, Client>::iterator it = clients.begin(); it != clients.end(); it++)
+	{
+		if (it->second.getNick() == nick && it->second.getFd() != client.getFd())
+			return sendMsg(client.getFd(), "433 " + nick + " :Nickname is already in use\r\n");
+	} // check for unique nickname
 	
-	
-	client.setNick(arg);
+	client.setNick(nick);
 	client.setNickOk(true);
 	sendMsg(client.getFd(), "NICK :" + arg + "\r\n");
 }
 //ERR_ERRONEUSNICKNAME (432), ERR_NICKNAMEINUSE (433), ERR_NICKCOLLISION (436)
-// 9 afficher max et unique
 
 void Server::handleUser(Client &client, const std::string &arg)
 {
