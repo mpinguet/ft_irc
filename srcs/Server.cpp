@@ -253,6 +253,7 @@ int find_client(std::map<int, Client> &clients, std::string &name)
 
 void Server::handlePrivmsg(Client &client, const std::string &arg)
 {
+	size_t pos = 0;
 	std::istringstream iss(arg);
 	std::string name;
 	iss >> name;
@@ -263,17 +264,27 @@ void Server::handlePrivmsg(Client &client, const std::string &arg)
 		sendMsg(client.getFd(), err_name);
 		return ;
 	}
-	Client target = clients[client_nb];
 	for(int i = name.size(); arg[i] != ':'; i++)
 	{
+		if (arg[i + 1] == ':')
+			pos = i + 1;
 		if (arg[i] == 32 || arg[i] == 9)
 			continue;
 		else
 		{
 			std::string err_text = ":ircserv 412 " + client.getNick() + " :No text to send\n";
+			sendMsg(client.getFd(), err_text);
 			return ;
 		}
 	}
+	std::string mess;
+	for (pos += 1; pos < arg.size(); pos++)
+		mess += arg[pos];
+	
+	std::map<int, Client>::iterator it = clients.find(client_nb);
+	Client& target = it->second;
+
+	sendMsg(target.getFd(), ":" + client.getNick() + "!" + client.getUser() + "@localhost PRIVMSG " + name + " :" + mess + "\r\n");
 	return ;
 }
 
