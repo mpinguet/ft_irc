@@ -39,6 +39,7 @@ void Server::init()
 		throw (std::runtime_error("bind() failed"));
 	if (listen(server_fd, SOMAXCONN) == -1) //The maximum number of pending connection
 		throw std::runtime_error("listen() failed");
+		throw std::runtime_error("listen() failed");
 	std::cout << "Server listening on port " << this->port << std::endl;
 }
 
@@ -171,10 +172,14 @@ void Server::parseCommand(Client &client, const std::string &line)
 		handleNick(client, arg);
 	else if (cmd == "USER")
 		handleUser(client, arg);
+	else if (cmd == "PRIVMSG" && client.isRegistered())
+		handlePrivmsg(client, arg);
 	else
 	{
 		if (!client.isRegistered())
 			sendMsg(client.getFd(), "451 :You have not registered\r\n");
+		else
+			sendMsg(client.getFd(), "421 " + cmd + " :Unknown command\r\n");
 	}
 }
 
@@ -234,6 +239,43 @@ void Server::handleUser(Client &client, const std::string &arg)
 
 	if (client.isRegistered())
 		sendWelcome(client);
+}
+
+int find_client(std::map<int, Client> &clients, std::string &name)
+{
+	std::map<int, Client>::const_iterator it;
+	for (it = clients.begin(); it != clients.end(); ++it)
+	{
+		if (it->second.getNick() == name)
+			return (it->first);
+	}
+	return (-1);
+}
+
+void Server::handlePrivmsg(Client &client, const std::string &arg)
+{
+	std::istringstream iss(arg);
+	std::string name;
+	iss >> name;
+	int client_nb = find_client(clients, name);
+	if (client_nb < 0)
+	{
+		std::string err_name = ":ircserv 401 " + client.getNick() + " " + name + " :No such nick/channel\n";
+		sendMsg(client.getFd(), err_name);
+		return ;
+	}
+	Client target = clients[client_nb];
+	for(int i = name.size(); arg[i] != ':'; i++)
+	{
+		if (arg[i] == 32 || arg[i] == 9)
+			continue;
+		else
+		{
+			std::string err_text = ":ircserv 412 " + client.getNick() + " :No text to send\n";
+			return ;
+		}
+	}
+	return ;
 }
 
 void Server::sendWelcome(Client &client)

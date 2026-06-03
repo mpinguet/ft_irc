@@ -12,6 +12,7 @@
 #include <poll.h>
 #include <vector>
 #include <map>
+#include <sstream>
 #include "Client.hpp"
 
 class Server
@@ -41,6 +42,8 @@ public:
 	void	handlePass(Client &client, const std::string &arg);
 	void	handleNick(Client &client, const std::string &arg);
 	void	handleUser(Client &client, const std::string &arg);
+	void	handlePrivmsg(Client &client, const std::string &arg);
+
 
 	void	sendWelcome(Client &client);
 	void	sendMsg(int fd, const std::string &msg);
