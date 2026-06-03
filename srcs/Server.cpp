@@ -173,6 +173,8 @@ void Server::parseCommand(Client &client, const std::string &line)
 		handleUser(client, arg);
 	else if (cmd == "PRIVMSG" && client.isRegistered())
 		handlePrivmsg(client, arg);
+	else if (cmd == "JOIN")
+		handleJoin(client, arg);
 	else
 	{
 		if (!client.isRegistered())
@@ -218,7 +220,7 @@ void Server::handleNick(Client &client, const std::string &arg)
 		if (it->second.getNick() == nick && it->second.getFd() != client.getFd())
 			return sendMsg(client.getFd(), "433 " + nick + " :Nickname is already in use\r\n");
 	} // check for unique nickname
-	
+
 	client.setNick(nick);
 	client.setNickOk(true);
 
@@ -279,6 +281,21 @@ void Server::handlePrivmsg(Client &client, const std::string &arg)
 	return ;
 }
 
+void Server::handleJoin(Client& client, const std::string& name){
+	std::string channelName = name;
+
+	if (channelName[0] != '#'){
+		sendMsg(client.getFd(), "ERROR: channel name must start with '#'\r\n");
+		return;
+	}
+
+	if (_Channels.find(channelName) == _Channels.end()){
+		_Channels[channelName] = Channel(channelName);
+		std::cout << "HERE" << std::endl;
+		// Mettre le client ADMIN
+	}
+}
+
 void Server::sendWelcome(Client &client)
 {
 	std::string nick = client.getNick();
@@ -293,4 +310,4 @@ void Server::sendMsg(int fd, const std::string &msg)
 }
 
 
-// est ce qu'on lance une erreur si le client envoie une commande avant de s'authentifier ? 
+// est ce qu'on lance une erreur si le client envoie une commande avant de s'authentifier ?

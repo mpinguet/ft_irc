@@ -1,7 +1,5 @@
 #include "../incs/Client.hpp"
 
-Client::Client() : fd(-1), passOk(false), nickOk(false), userOk(false) {}
-
 Client::Client(int fd) : fd(fd), passOk(false), nickOk(false), userOk(false) {}
 
 Client::~Client() {}
@@ -24,8 +22,8 @@ void	Client::setNickOk(bool b) { nickOk = b; }
 void	Client::setUserOk(bool b) { userOk = b; }
 
 void	Client::appendBuffer(const std::string &data)
-{ 
-	buffer += data; 
+{
+	buffer += data;
 }
 void	Client::clearBuffer()
 {
