@@ -173,6 +173,8 @@ void Server::parseCommand(Client &client, const std::string &line)
 		handleUser(client, arg);
 	else if (cmd == "PRIVMSG" && client.isRegistered())
 		handlePrivmsg(client, arg);
+	else if (cmd == "JOIN")
+		handleJoin(client, arg);
 	else
 	{
 		if (!client.isRegistered())
@@ -275,6 +277,21 @@ void Server::handlePrivmsg(Client &client, const std::string &arg)
 		}
 	}
 	return ;
+}
+
+void Server::handleJoin(Client& client, const std::string& name){
+	std::string channelName = name;
+
+	if (channelName[0] != '#'){
+		sendMsg(client.getFd(), "ERROR: channel name must start with '#'\r\n");
+		return;
+	}
+
+	if (_Channels.find(channelName) == _Channels.end()){
+		_Channels[channelName] = Channel(channelName);
+		std::cout << "HERE" << std::endl;
+		// Mettre le client ADMIN
+	}
 }
 
 void Server::sendWelcome(Client &client)

@@ -2,7 +2,7 @@
 
 #include <string>
 
-class Client 
+class Client
 {
 	private:
 		std::string	pass;
@@ -15,6 +15,7 @@ class Client
 		std::string	buffer;
 
 	public:
+		Client();
 		Client(int );
 		~Client();
 
