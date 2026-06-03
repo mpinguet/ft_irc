@@ -39,7 +39,6 @@ void Server::init()
 		throw (std::runtime_error("bind() failed"));
 	if (listen(server_fd, SOMAXCONN) == -1) //The maximum number of pending connection
 		throw std::runtime_error("listen() failed");
-		throw std::runtime_error("listen() failed");
 	std::cout << "Server listening on port " << this->port << std::endl;
 }
 
@@ -222,7 +221,9 @@ void Server::handleNick(Client &client, const std::string &arg)
 	
 	client.setNick(nick);
 	client.setNickOk(true);
-	sendMsg(client.getFd(), "NICK :" + arg + "\r\n");
+
+	if (client.isRegistered())
+		sendWelcome(client);
 }
 //ERR_ERRONEUSNICKNAME (432), ERR_NICKNAMEINUSE (433), ERR_NICKCOLLISION (436)
 
