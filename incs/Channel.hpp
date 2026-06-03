@@ -15,7 +15,7 @@ private:
 	bool _inviteOnly;
 	int _userLimit;
 
-	// std::map<int, Client*> client;
+	// std::vector<int, 
 
 	public:
 	Channel();

@@ -4,6 +4,6 @@
 
 Channel::Channel() {}
 
-Channel::Channel(std::string name) : _Name(name) {}
+Channel::Channel(std::string name) : _Name(name), _inviteOnly(false), _userLimit(0) {}
 
 Channel::~Channel() {}
