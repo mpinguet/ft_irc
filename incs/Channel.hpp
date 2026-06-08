@@ -11,26 +11,46 @@ private:
 	std::string _Name;
 	std::string _Key;
 	std::string _Topic;
-	bool _isPrivate;
-	bool _inviteOnly;
-	int _userLimit;
+	bool	_inviteOnly;
+	bool	topicProtected;
+	int		_userLimit;
 
-	// std::map<int, Client*> client;
+	std::map<int, Client*> members;
+	std::map<int, Client*> operators;
+	std::map<int, Client*> invited;
 
 	public:
-	Channel();
-	Channel(std::string name);
-	~Channel();
+		Channel();
+		Channel(std::string name);
+		~Channel();
 
-	std::string getName();
-	std::string getKey();
-	std::string getTopic();
+		const std::string &getName() const;
+		const std::string &getKey() const ;
+		const std::string &getTopic() const;
+		bool	isInviteOnly() const ;
+		bool	isTopicProtected()const ;
+        int		getUserLimit()const ;
 
-	std::string setName();
-	std::string setKey();
-	std::string setTopic();
-	void setUserLimit(int limit);
+		void	setKey(const std::string &key);
+		void	setTopic(const std::string &topic);
+		void	setInviteOnly(bool value);
+		void	setTopicProtected(bool val);
+		void	setUserLimit(int limit);
 
-	void inviteClient(Client clients);
-	void kickClients();
+		void	addMember(Client *client);
+		void	removeMember(int fd);
+		bool	isMember(int fd) const;
+		bool	isEmpty() const;
+		int		getMemberCount() const;
+		const	std::map<int, Client*> &getMembers() const;
+
+		void	addOperator(Client *client); //+o 
+		void	removeOperator(int fd); //-o
+		bool	isOperator(int fd) const;
+
+		void	addInvited(Client *client);
+		bool	isInvited(int fd) const;
+
+		std::string	getMemberList() const;
+		void		broadcast(const std::string &msg, int excludeFd = -1); //envoye un mess a tout les membres du channel
 };

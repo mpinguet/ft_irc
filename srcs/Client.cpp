@@ -2,6 +2,8 @@
 
 Client::Client(int fd) : fd(fd), passOk(false), nickOk(false), userOk(false) {}
 
+Client::Client() {}
+
 Client::~Client() {}
 
 int	Client::getFd()	const { return fd; }

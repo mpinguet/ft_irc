@@ -281,8 +281,20 @@ void Server::handlePrivmsg(Client &client, const std::string &arg)
 	return ;
 }
 
-void Server::handleJoin(Client& client, const std::string& name){
+void Server::handleJoin(Client& client, const std::string& name)
+{
 	std::string channelName = name;
+
+	std::string key;
+	size_t space = name.find(' ');
+
+	if (space == std::string::npos) //verifie si mdp for channel +k et parse
+		channelName = name;
+	else
+	{
+		channelName = name.substr(0, space);
+		key = name.substr(space + 1);
+	}
 
 	if (channelName[0] != '#'){
 		sendMsg(client.getFd(), "ERROR: channel name must start with '#'\r\n");
@@ -294,6 +306,34 @@ void Server::handleJoin(Client& client, const std::string& name){
 		std::cout << "HERE" << std::endl;
 		// Mettre le client ADMIN
 	}
+
+	Channel &channel = _Channels[channelName];
+
+	//evite de mettre deux fois la meme personne 
+	if (channel.isMember(client.getFd()))
+		return;
+
+	//invite only
+	if (channel.isInviteOnly() && !channel.isInvited(client.getFd()))
+		return sendMsg(client.getFd(), ":ircserv 473 " + client.getNick() + " " + channelName + " :Cannot join channel (+i)\r\n");
+
+	//key protected
+	if (!channel.getKey().empty() && channel.getKey() != key)
+		return sendMsg(client.getFd(), ":ircserv 475 " + client.getNick() + " " + channelName + " :Cannot join channel (+k)\r\n");
+
+	//user limit
+	if (channel.getUserLimit() != -1 && channel.getMemberCount() >= channel.getUserLimit())
+		return sendMsg(client.getFd(), ":ircserv 471 " + client.getNick() + " " + channelName + " :Cannot join channel (+l)\r\n");
+
+	channel.addMember(&clients.find(client.getFd())->second);
+
+	if (channel.getMemberCount() == 1) //si tout seul obligatoirement admin
+		channel.addOperator(&clients.find(client.getFd())->second);
+
+	//mess
+	sendMsg(client.getFd(), ":ircserv 353 " + client.getNick() + " = " + channelName + " :" + channel.getMemberList() + "\r\n");
+    sendMsg(client.getFd(), ":ircserv 366 " + client.getNick() + " " + channelName + " :End of /NAMES list\r\n");
+
 }
 
 void Server::sendWelcome(Client &client)
@@ -308,6 +348,3 @@ void Server::sendMsg(int fd, const std::string &msg)
 {
 	send(fd, msg.c_str(), msg.size(), 0);
 }
-
-
-// est ce qu'on lance une erreur si le client envoie une commande avant de s'authentifier ?
