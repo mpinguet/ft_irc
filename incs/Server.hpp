@@ -53,4 +53,7 @@ public:
 	void	sendWelcome(Client &client);
 	void	sendMsg(int fd, const std::string &msg);
 
+	//Modes
+	void handleModes(Client &client, const std::string &arg);
+
 };

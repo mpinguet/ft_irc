@@ -175,6 +175,8 @@ void Server::parseCommand(Client &client, const std::string &line)
 		handlePrivmsg(client, arg);
 	else if (cmd == "JOIN")
 		handleJoin(client, arg);
+	else if (cmd == "MODE")
+		handleModes(client, arg);
 	else
 	{
 		if (!client.isRegistered())
@@ -283,6 +285,12 @@ void Server::handlePrivmsg(Client &client, const std::string &arg)
 
 void Server::handleJoin(Client& client, const std::string& name)
 {
+	if(!client.isRegistered())
+	{
+		sendMsg(client.getFd(), "451 :You have not registered\r\n");
+		return;
+	}
+
 	std::string channelName = name;
 
 	std::string key;
@@ -301,10 +309,11 @@ void Server::handleJoin(Client& client, const std::string& name)
 		return;
 	}
 
-	if (_Channels.find(channelName) == _Channels.end()){
+	if (_Channels.find(channelName) == _Channels.end())
+	{
 		_Channels[channelName] = Channel(channelName);
-		std::cout << "HERE" << std::endl;
-		// Mettre le client ADMIN
+		_Channels[channelName].addOperator(&clients.find(client.getFd())->second);
+		std::cout << "MESS DEBUG: CHANNEL CREATED" << std::endl;
 	}
 
 	Channel &channel = _Channels[channelName];
@@ -327,14 +336,77 @@ void Server::handleJoin(Client& client, const std::string& name)
 
 	channel.addMember(&clients.find(client.getFd())->second);
 
-	if (channel.getMemberCount() == 1) //si tout seul obligatoirement admin
-		channel.addOperator(&clients.find(client.getFd())->second);
+	// if (channel.getMemberCount() == 1) //si tout seul obligatoirement admin
+	// 	channel.addOperator(&clients.find(client.getFd())->second);
+
+	std::string joinMsg = ":" + client.getNick() + "!" + "JOIN" + " :" + channelName + "\r\n"; /// le message est surement pas le bon a changer dans le futur
+	channel.broadcast(joinMsg);
 
 	//mess
 	sendMsg(client.getFd(), ":ircserv 353 " + client.getNick() + " = " + channelName + " :" + channel.getMemberList() + "\r\n");
-    sendMsg(client.getFd(), ":ircserv 366 " + client.getNick() + " " + channelName + " :End of /NAMES list\r\n");
+	sendMsg(client.getFd(), ":ircserv 366 " + client.getNick() + " " + channelName + " :End of /NAMES list\r\n");
 
 }
+
+void Server::handleModes(Client& client, const std::string& arg)
+{
+	size_t space = arg.find(' ');
+	if (space == std::string::npos)
+		return sendMsg(client.getFd(), "461 USER :Not enough parameters\r\n"); // a verif l'erreur exact pour ce cas
+
+	std::string channelName = arg.substr(0, space);
+	std::string rest = arg.substr(space + 1);
+
+	size_t space2 = rest.find(' ');
+	std::string mode = rest.substr(0, space2);
+
+	std::string third;
+	if (space2 == std::string::npos)
+		third = "";
+	else
+		third = rest.substr(space2 + 1);
+
+	if(mode.size() < 2)
+		return sendMsg(client.getFd(), "VOIR CODE ERREUR\r\n");  // a voir
+	
+	if (_Channels.find(channelName) == _Channels.end())
+		return sendMsg(client.getFd(), "403 :No such channel\r\n"); // same
+
+	Channel &channel = _Channels[channelName];
+
+	if(!channel.isOperator(client.getFd()))
+		return sendMsg(client.getFd(), "482 :User is not an Administrator\r\n"); //482 ERR_CHANOPRIVSNEEDED
+
+	// char sign = mode[0];
+	char action = mode[1];
+
+	if(action == 'i')
+	{
+
+	}
+	else if(action == 't')
+	{
+
+	}
+	else if(action == 'k')
+	{
+
+	}
+	else if(action == 'o')
+	{
+		
+	}
+	else if(action == 'l')
+	{
+		
+	}
+	else 
+		sendMsg(client.getFd(), "472 :Unknown Mode\r\n"); //472 ERR_UNKNOWNMODE
+
+}
+//MODE
+//i t k o l avec + et - a chaque fois donc 10 retour a faire.
+// a verifier MODE marque les options maybe done with hexchat
 
 void Server::sendWelcome(Client &client)
 {
@@ -348,3 +420,11 @@ void Server::sendMsg(int fd, const std::string &msg)
 {
 	send(fd, msg.c_str(), msg.size(), 0);
 }
+
+
+//parsing channel name 
+//mode only for ops
+// channel only created zithout mdp and need to mode after to add pass
+
+//parsing for mode to DO todaaay
+
