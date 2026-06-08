@@ -48,6 +48,7 @@ public:
 	void	handleNick(Client &client, const std::string &arg);
 	void	handleUser(Client &client, const std::string &arg);
 	void	handlePrivmsg(Client &client, const std::string &arg);
+	void	handleList(Client &client, std::string channel);
 
 
 	void	sendWelcome(Client &client);

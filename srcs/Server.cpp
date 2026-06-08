@@ -175,6 +175,8 @@ void Server::parseCommand(Client &client, const std::string &line)
 		handlePrivmsg(client, arg);
 	else if (cmd == "JOIN")
 		handleJoin(client, arg);
+	else if (cmd == "LIST")
+		handleList(client, arg);
 	else
 	{
 		if (!client.isRegistered())
@@ -296,6 +298,8 @@ void Server::handleJoin(Client& client, const std::string& name)
 		key = name.substr(space + 1);
 	}
 
+	Channel &channel = _Channels[channelName];
+
 	if (channelName[0] != '#'){
 		sendMsg(client.getFd(), "ERROR: channel name must start with '#'\r\n");
 		return;
@@ -304,12 +308,11 @@ void Server::handleJoin(Client& client, const std::string& name)
 	if (_Channels.find(channelName) == _Channels.end()){
 		_Channels[channelName] = Channel(channelName);
 		std::cout << "HERE" << std::endl;
+		channel.addOperator(&clients.find(client.getFd())->second);
 		// Mettre le client ADMIN
 	}
 
-	Channel &channel = _Channels[channelName];
-
-	//evite de mettre deux fois la meme personne 
+	//evite de mettre deux fois la meme personne
 	if (channel.isMember(client.getFd()))
 		return;
 
@@ -327,13 +330,29 @@ void Server::handleJoin(Client& client, const std::string& name)
 
 	channel.addMember(&clients.find(client.getFd())->second);
 
-	if (channel.getMemberCount() == 1) //si tout seul obligatoirement admin
-		channel.addOperator(&clients.find(client.getFd())->second);
+	// if (channel.getMemberCount() == 1) //si tout seul obligatoirement admin
+	// 	channel.addOperator(&clients.find(client.getFd())->second);
 
 	//mess
 	sendMsg(client.getFd(), ":ircserv 353 " + client.getNick() + " = " + channelName + " :" + channel.getMemberList() + "\r\n");
     sendMsg(client.getFd(), ":ircserv 366 " + client.getNick() + " " + channelName + " :End of /NAMES list\r\n");
 
+}
+
+void Server::handleList(Client& client, std::string channel){
+	std::map<std::string, Channel>::iterator it = _Channels.find(channel);
+	if (channel.empty())
+		sendMsg(client.getFd(), "Please, specify a channel\r\n"); //mettre le protocole, je connais pas la syntax
+	else if (it == _Channels.end())
+		sendMsg(client.getFd(), "No channel found\r\n");
+	// Channel &channel = it->second;
+	// std::string memberList =
+	else{
+		sendMsg(client.getFd(), "Channel member list: ");
+		sendMsg(client.getFd(), it->second.getMemberList());
+		sendMsg(client.getFd(), "\r\n");
+	}
+	// channel.getMemberList();
 }
 
 void Server::sendWelcome(Client &client)
