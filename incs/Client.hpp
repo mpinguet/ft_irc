@@ -15,8 +15,8 @@ class Client
 		std::string	buffer;
 
 	public:
-		Client();
 		Client(int );
+		Client();
 		~Client();
 
 		//les getters

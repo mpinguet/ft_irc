@@ -1,19 +1,19 @@
 #include "../incs/Client.hpp"
 
-Client::Client() {};
-
 Client::Client(int fd) : fd(fd), passOk(false), nickOk(false), userOk(false) {}
+
+Client::Client() {}
 
 Client::~Client() {}
 
 int	Client::getFd()	const { return fd; }
-std::string	Client::getPass()   const { return pass; }
-std::string	Client::getNick()   const { return nick; }
-std::string	Client::getUser()   const { return user; }
-std::string	Client::getBuffer() const { return buffer; }
-bool	Client::isPassOk()  const { return passOk; }
-bool	Client::isNickOk()  const { return nickOk; }
-bool	Client::isUserOk()  const { return userOk; }
+std::string	Client::getPass()	const { return pass; }
+std::string	Client::getNick()	const { return nick; }
+std::string	Client::getUser()	const { return user; }
+std::string	Client::getBuffer()	const { return buffer; }
+bool	Client::isPassOk() const { return passOk; }
+bool	Client::isNickOk() const { return nickOk; }
+bool	Client::isUserOk() const { return userOk; }
 bool	Client::isRegistered() const { return passOk && nickOk && userOk; }
 
 void	Client::setPass(const std::string &p) { pass = p; }
