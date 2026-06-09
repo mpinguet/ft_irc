@@ -175,6 +175,9 @@ void Server::parseCommand(Client &client, const std::string &line)
 		handlePrivmsg(client, arg);
 	else if (cmd == "JOIN")
 		handleJoin(client, arg);
+	else if (cmd == "KICK")
+		handleKick(client, arg);
+		// std::cout << "KICK called" << std::endl;
 	else if (cmd == "LIST")
 		handleList(client, arg);
 	else
@@ -353,6 +356,19 @@ void Server::handleList(Client& client, std::string channel){
 		sendMsg(client.getFd(), "\r\n");
 	}
 	// channel.getMemberList();
+}
+
+void Server::handleKick(Client& client, std::string& arg){
+	std::istringstream iss(arg);
+	std::string channel, target, reason;
+	if (arg.empty())
+		sendMsg(client.getFd(), "KICK: Not enough parameters"); //Protocol needed
+	if (!(iss >> channel >> target))
+		std::cout << "test" << std::endl;
+	else if (iss >> reason)
+		std::cout << "reason: " + reason + "\r\n" << std::endl;
+	else
+		std::cout << "channel: " + channel + " target: " + target + "\r\n" << std::endl;
 }
 
 void Server::sendWelcome(Client &client)
