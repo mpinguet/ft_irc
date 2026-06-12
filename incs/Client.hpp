@@ -2,7 +2,7 @@
 
 #include <string>
 
-class Client 
+class Client
 {
 	private:
 		std::string	pass;
@@ -16,6 +16,7 @@ class Client
 
 	public:
 		Client(int );
+		Client();
 		~Client();
 
 		//les getters
