@@ -98,6 +98,21 @@ void Server::newClient(int &client_nb, std::vector<struct pollfd> &fds, int clie
 // ---------------------------------- \\.
 
 // ------ HANDLE CLIENT EVENT ------ \\.
+
+void Server::handleClientEvent(std::vector<struct pollfd> &fds, size_t &index){
+	char buff[512];
+	int byte = recv(fds[index].fd, buff, sizeof(buff), 0);
+
+	if (byte == 0)
+	{
+		handleDisconnection(fds, index);
+		--index;
+	}
+	else if (byte > 0)
+		handleData(buff, byte, fds, index);
+	else
+		std::cout << "recv() failed" << std::endl;
+}
 void Server::handleDisconnection(std::vector<struct pollfd> &fds, size_t index)
 {
     int fd = fds[index].fd;
@@ -190,10 +205,54 @@ void Server::parseCommand(Client &client, const std::string &line)
 	}
 }
 
+int countWords(const std::string& str) {
+	if (str.empty())
+		return (0);
+    std::istringstream iss(str);
+    std::string word;
+    int count = 0;
+
+    while (iss >> word) {
+        count++;
+    }
+    return count;
+}
+
+int countWordPart(std::vector<std::string> &vec, const std::string &str)
+{
+	if (str.empty())
+		return (0);
+    std::istringstream iss(str);
+
+    std::string word;
+    int count = 0;
+
+    while (iss >> word) {
+		vec.push_back(word);
+        count++;
+    }
+    return count;
+}
+
 void Server::handlePart(Client &client, const std::string &arg)
 {
-	(void) client;
-	std::cout << arg << std::endl;
+	std::vector<std::string> vec;
+	int nbWord = countWordPart(vec, arg);
+	if (nbWord == 0)
+	{
+		sendMsg(client.getFd(), ":ircserv 461 " + client.getNick() + " PART :Not enough parameters\r\n";)
+		return ;
+	}
+	else if (nbWord == 1)
+	{
+
+	}
+	else
+	{
+
+	}
+
+	
 }
 
 void Server::handlePass(Client &client, const std::string &arg)
@@ -241,16 +300,6 @@ void Server::handleNick(Client &client, const std::string &arg)
 }
 //ERR_ERRONEUSNICKNAME (432), ERR_NICKNAMEINUSE (433), ERR_NICKCOLLISION (436)
 
-int countWords(const std::string& str) {
-    std::istringstream iss(str);
-    std::string word;
-    int count = 0;
-
-    while (iss >> word) {
-        count++;
-    }
-    return count;
-}
 
 void Server::handleUser(Client &client, const std::string &arg)
 {
