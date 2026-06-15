@@ -41,7 +41,8 @@ public:
 	bool handleData(char *buff, int byte, std::vector<struct pollfd> &fds, size_t index);
 	void handleJoin(Client& client, const std::string& name);
 	void handlePart(Client &client, const std::string &arg);
-
+	void handleKick(Client &client, const std::string &arg);
+	void handleInvite(Client &client, const std::string &arg);
 
 	// Parsing line
 	bool	parseCommand(Client &client, const std::string &line, std::vector<struct pollfd> &fds);
