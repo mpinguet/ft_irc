@@ -36,22 +36,28 @@ public:
 
 	void newClient(int &client_nb, std::vector<struct pollfd> &fds, int client_fd);
 	void handleServerEvent(int &client_nb, std::vector<struct pollfd> &fds);
-	void handleClientEvent(std::vector<struct pollfd> &fds, size_t &index);
+	bool handleClientEvent(std::vector<struct pollfd> &fds, size_t &index);
 	void handleDisconnection(std::vector<struct pollfd> &fds, size_t index);
-	void handleData(char *buff, int byte, std::vector<struct pollfd> &fds, size_t index);
+	bool handleData(char *buff, int byte, std::vector<struct pollfd> &fds, size_t index);
 	void handleJoin(Client& client, const std::string& name);
-
+	void handlePart(Client &client, const std::string &arg);
+	void handleKick(Client &client, const std::string &arg);
+	void handleInvite(Client &client, const std::string &arg);
 
 	// Parsing line
-	void	parseCommand(Client &client, const std::string &line);
+	bool	parseCommand(Client &client, const std::string &line, std::vector<struct pollfd> &fds);
 	void	handlePass(Client &client, const std::string &arg);
 	void	handleNick(Client &client, const std::string &arg);
 	void	handleUser(Client &client, const std::string &arg);
 	void	handlePrivmsg(Client &client, const std::string &arg);
+	void	handleQuit(Client &client, const std::string &arg, std::vector<struct pollfd> &fds);
 
 
 	void	sendWelcome(Client &client);
 	void	sendMsg(int fd, const std::string &msg);
+
+	//Modes
+	void handleModes(Client &client, const std::string &arg);
 
 	//Modes
 	void handleModes(Client &client, const std::string &arg);
