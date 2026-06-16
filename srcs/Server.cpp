@@ -238,14 +238,14 @@ void Server::handleTopic(Client& client, const std::string &arg){
 	Channel& channel = _Channels[channelName];
 
 	if (!channel.isMember(client.getFd()))
-		return (sendMsg(client.getFd(), "Not a member\r\n"));
+		return sendMsg(client.getFd(), ":ircsserv 442 " + client.getNick() + " " + channelName + " :Not part of the channel\r\n"); //verif le text maybe
 	else if (channel.isTopicProtected()){
 		if (!channel.isOperator(client.getFd()))
-			return (sendMsg(client.getFd(), "Not an operator\r\n"));
+		return sendMsg(client.getFd(), ":ircserv 482 " + client.getNick() + " " + channelName + " :You're not channel operator\r\n");
 	}
 	if (topic.empty()){
 		if (channel.getTopic().empty())
-			return (sendMsg(client.getFd(), "No topic set\r\n"));
+			return sendMsg(client.getFd(), ":ircserv 331 " + client.getNick() + " " + channelName + " :No topic is set\r\n");
 		return (sendMsg(client.getFd(), channel.getTopic() + "\r\n"));
 	}
 	if (topic[1] == ':')
@@ -771,7 +771,6 @@ void Server::handleModes(Client& client, const std::string& arg)
 			channel.setInviteOnly(true);
 		else
 			channel.setInviteOnly(false);
-		// channel.broadcast(":ircserv MODE " + channelName + " " + mode + "\r\n");
 		channel.broadcast(":" + client.getNick() + "!" + client.getUser() + "@localhost MODE " + channelName + " " + mode + "\r\n");
 
 	}
@@ -781,7 +780,6 @@ void Server::handleModes(Client& client, const std::string& arg)
 			channel.setTopicProtected(true);
 		else
 			channel.setTopicProtected(false);
-		// channel.broadcast(":ircserv MODE " + channelName + " " + mode + "\r\n");
 		channel.broadcast(":" + client.getNick() + "!" + client.getUser() + "@localhost MODE " + channelName + " " + mode + "\r\n");
 
 	}
@@ -797,14 +795,12 @@ void Server::handleModes(Client& client, const std::string& arg)
 				return sendMsg(client.getFd(), ":ircserv 467 " + client.getNick() + " " + channelName + " :Channel key already set\r\n");
 
 			channel.setKey(third);
-			// channel.broadcast(":ircserv MODE " + channelName + " " + mode + " " + third + "\r\n");
 			channel.broadcast(":" + client.getNick() + "!" + client.getUser() + "@localhost MODE " + channelName + " " + mode + " " + third + "\r\n");
 
 		}
 		else
 		{
 			channel.setKey("");
-			// channel.broadcast(":ircserv MODE " + channelName + " " + mode + "\r\n");
 			channel.broadcast(":" + client.getNick() + "!" + client.getUser() + "@localhost MODE " + channelName + " " + mode + "\r\n");
 		}
 	}
@@ -834,7 +830,6 @@ void Server::handleModes(Client& client, const std::string& arg)
 		else
 			channel.removeOperator(target->getFd());
 
-		// channel.broadcast(":ircserv MODE " + channelName + " " + mode + " " + third + "\r\n");
 		channel.broadcast(":" + client.getNick() + "!" + client.getUser() + "@localhost MODE " + channelName + " " + mode + " " + third + "\r\n");
 	}
 	else if(action == 'l') //user limit
