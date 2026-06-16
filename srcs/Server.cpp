@@ -547,11 +547,7 @@ void Server::handleNick(Client &client, const std::string &arg)
 	if (client.isRegistered())
 		sendWelcome(client);
 
-	if (client.isRegistered())
-		sendWelcome(client);
 }
-//ERR_ERRONEUSNICKNAME (432), ERR_NICKNAMEINUSE (433), ERR_NICKCOLLISION (436)
-
 
 void Server::handleUser(Client &client, const std::string &arg)
 {
@@ -815,6 +811,9 @@ void Server::handleModes(Client& client, const std::string& arg)
 		{
 			if (third.empty())
 				return sendMsg(client.getFd(), ":ircserv 461 MODE :Not enough parameters\r\n");
+			int limit = atoi(third.c_str());
+			if (limit <= 0)
+				return sendMsg(client.getFd(), ":ircserv 461 MODE :Invalid limit\r\n");
 			channel.setUserLimit(atoi(third.c_str()));
 			// channel.broadcast(":ircserv MODE " + channelName + " " + mode + " " + third + "\r\n");
 			channel.broadcast(":" + client.getNick() + "!" + client.getUser() + "@localhost MODE " + channelName + " " + mode + " " + third + "\r\n");
