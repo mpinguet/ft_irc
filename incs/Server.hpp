@@ -45,12 +45,15 @@ public:
 	void handleInvite(Client &client, const std::string &arg);
 
 	// Parsing line
+	void	parseCommand(Client &client, const std::string &line);
+	// Parsing line
 	bool	parseCommand(Client &client, const std::string &line, std::vector<struct pollfd> &fds);
 	void	handlePass(Client &client, const std::string &arg);
 	void	handleNick(Client &client, const std::string &arg);
 	void	handleUser(Client &client, const std::string &arg);
 	void	handlePrivmsg(Client &client, const std::string &arg);
 	void	handleQuit(Client &client, const std::string &arg, std::vector<struct pollfd> &fds);
+	void	handleTopic(Client& client, const std::string &arg);
 
 
 	void	sendWelcome(Client &client);

@@ -202,6 +202,8 @@ bool Server::parseCommand(Client &client, const std::string &line, std::vector<s
 		handleJoin(client, arg);
 	else if (cmd == "MODE" && client.isRegistered())
 		handleModes(client, arg);
+	else if (cmd == "TOPIC" && client.isRegistered())
+		handleTopic(client, arg);
 	else if (cmd == "KICK")
 		handleKick(client, arg);
 	else if (cmd == "PART" && client.isRegistered())
@@ -221,6 +223,36 @@ bool Server::parseCommand(Client &client, const std::string &line, std::vector<s
 			sendMsg(client.getFd(), "421 " + cmd + " :Unknown command\r\n");
 	}
 	return false;
+}
+
+void Server::handleTopic(Client& client, const std::string &arg){
+	std::istringstream iss(arg);
+	std::string channelName, topic;
+
+	iss >> channelName;
+	std::getline(iss, topic);
+	std::map<std::string, Channel>::iterator chIt = _Channels.find(channelName);
+	if (chIt == _Channels.end())
+		return (sendMsg(client.getFd(), "403 " +client.getNick() + channelName + " :No such channel\r\n"));
+
+	Channel& channel = _Channels[channelName];
+
+	if (!channel.isMember(client.getFd()))
+		return (sendMsg(client.getFd(), "Not a member\r\n"));
+	else if (channel.isTopicProtected()){
+		if (!channel.isOperator(client.getFd()))
+			return (sendMsg(client.getFd(), "Not an operator\r\n"));
+	}
+	if (topic.empty()){
+		if (channel.getTopic().empty())
+			return (sendMsg(client.getFd(), "No topic set\r\n"));
+		return (sendMsg(client.getFd(), channel.getTopic() + "\r\n"));
+	}
+	if (topic[1] == ':')
+		topic = topic.substr(2);
+	else
+		topic = topic.substr(1);
+	channel.setTopic(topic);
 }
 
 int find_client(std::map<int, Client> &clients, std::string &name)
@@ -669,7 +701,7 @@ void Server::handleJoin(Client& client, const std::string& name)
 
 	Channel &channel = _Channels[channelName];
 
-	//evite de mettre deux fois la meme personne 
+	//evite de mettre deux fois la meme personne
 	if (channel.isMember(client.getFd()))
 		return;
 
@@ -716,7 +748,7 @@ void Server::handleModes(Client& client, const std::string& arg)
 
 	if(mode.size() < 2)
 		return sendMsg(client.getFd(), ":ircserv 472 " + client.getNick() + " " + mode + " :Unknown mode\r\n");  // a voir
-	
+
 	if (_Channels.find(channelName) == _Channels.end())
 		return sendMsg(client.getFd(), ":ircserv 403 " + client.getNick() + " " + channelName + " :No such channel\r\n");
 
@@ -793,7 +825,7 @@ void Server::handleModes(Client& client, const std::string& arg)
 
 		if (!target)
 			return sendMsg(client.getFd(), ":ircserv 401 " + client.getNick() + " " + third + " :No such nick\r\n");
-		
+
 		if (!channel.isMember(target->getFd()))
 			return sendMsg(client.getFd(), ":ircserv 441 " + third + " " + channelName + " :They aren't on that channel\r\n");
 
@@ -825,7 +857,7 @@ void Server::handleModes(Client& client, const std::string& arg)
 			channel.broadcast(":" + client.getNick() + "!" + client.getUser() + "@localhost MODE " + channelName + " " + mode + "\r\n");
 		}
 	}
-	else 
+	else
 		sendMsg(client.getFd(), ":ircserv 472 :Unknown Mode\r\n"); //472 ERR_UNKNOWNMODE
 }
 
