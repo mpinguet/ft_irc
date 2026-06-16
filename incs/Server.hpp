@@ -53,6 +53,7 @@ public:
 	void	handleUser(Client &client, const std::string &arg);
 	void	handlePrivmsg(Client &client, const std::string &arg);
 	void	handleQuit(Client &client, const std::string &arg, std::vector<struct pollfd> &fds);
+	void	handleTopic(Client& client, const std::string &arg);
 
 
 	void	sendWelcome(Client &client);

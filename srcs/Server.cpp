@@ -201,6 +201,8 @@ bool Server::parseCommand(Client &client, const std::string &line, std::vector<s
 		handleJoin(client, arg);
 	else if (cmd == "MODE")
 		handleModes(client, arg);
+	else if (cmd == "TOPIC" && client.isRegistered())
+		handleTopic(client, arg);
 	else if (cmd == "KICK")
 		handleKick(client, arg);
 	else if (cmd == "PART" && client.isRegistered())
@@ -220,6 +222,36 @@ bool Server::parseCommand(Client &client, const std::string &line, std::vector<s
 			sendMsg(client.getFd(), "421 " + cmd + " :Unknown command\r\n");
 	}
 	return false;
+}
+
+void Server::handleTopic(Client& client, const std::string &arg){
+	std::istringstream iss(arg);
+	std::string channelName, topic;
+
+	iss >> channelName;
+	std::getline(iss, topic);
+	std::map<std::string, Channel>::iterator chIt = _Channels.find(channelName);
+	if (chIt == _Channels.end())
+		return (sendMsg(client.getFd(), "403 " +client.getNick() + channelName + " :No such channel\r\n"));
+
+	Channel& channel = _Channels[channelName];
+
+	if (!channel.isMember(client.getFd()))
+		return (sendMsg(client.getFd(), "Not a member\r\n"));
+	else if (channel.isTopicProtected()){
+		if (!channel.isOperator(client.getFd()))
+			return (sendMsg(client.getFd(), "Not an operator\r\n"));
+	}
+	if (topic.empty()){
+		if (channel.getTopic().empty())
+			return (sendMsg(client.getFd(), "No topic set\r\n"));
+		return (sendMsg(client.getFd(), channel.getTopic() + "\r\n"));
+	}
+	if (topic[1] == ':')
+		topic = topic.substr(2);
+	else
+		topic = topic.substr(1);
+	channel.setTopic(topic);
 }
 
 int find_client(std::map<int, Client> &clients, std::string &name)
@@ -553,8 +585,8 @@ void Server::handleUser(Client &client, const std::string &arg)
 	if (!client.isPassOk())
 		return sendMsg(client.getFd(), "464 :Password required\r\n");
 
-	int param = countWords(arg);
-	if (arg.empty() || param != 4)
+	// int param = countWords(arg);
+	if (arg.empty())
 		return sendMsg(client.getFd(), "461 USER :Not enough parameters\r\n");
 
 	std::string username = arg.substr(0, arg.find(' '));
