@@ -43,6 +43,8 @@ public:
 	void handlePart(Client &client, const std::string &arg);
 	void handleKick(Client &client, const std::string &arg);
 	void handleInvite(Client &client, const std::string &arg);
+	void handleTopic(Client& client, const std::string &arg);
+
 
 	// Parsing line
 	bool	parseCommand(Client &client, const std::string &line, std::vector<struct pollfd> &fds);

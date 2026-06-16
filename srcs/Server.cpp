@@ -203,6 +203,8 @@ bool Server::parseCommand(Client &client, const std::string &line, std::vector<s
 		handleModes(client, arg);
 	else if (cmd == "KICK")
 		handleKick(client, arg);
+	else if (cmd == "TOPIC" && client.isRegistered())
+		handleTopic(client, arg);
 	else if (cmd == "PART" && client.isRegistered())
 		handlePart(client, arg);
 	else if (cmd == "INVITE" && client.isRegistered())
@@ -293,6 +295,38 @@ void	Server::handleQuit(Client &client, const std::string &arg, std::vector<stru
     }
 	close(client.getFd());
     clients.erase(client.getFd());
+}
+
+void Server::handleTopic(Client& client, const std::string &arg){
+	std::istringstream iss(arg);
+	std::string channelName, topic;
+
+	iss >> channelName;
+	std::getline(iss, topic);
+	std::map<std::string, Channel>::iterator chIt = _Channels.find(channelName);
+	if (chIt == _Channels.end())
+		return (sendMsg(client.getFd(), "403 " +client.getNick() + " " + channelName + " :No such channel\r\n"));
+
+	Channel& channel = _Channels[channelName];
+
+	if (!channel.isMember(client.getFd()))
+		return (sendMsg(client.getFd(), ":ircserv 442 " + client.getNick() + " " + channelName + " :You're not on that channel\r\n"));
+	else if (channel.isTopicProtected()){
+		if (!channel.isOperator(client.getFd()))
+			return (sendMsg(client.getFd(), ":ircserv 482 " + client.getNick() + " " + channelName + " :You're not channel operator\r\n"));
+	}
+	if (topic.empty()){
+		if (channel.getTopic().empty())
+			return (sendMsg(client.getFd(), ":ircserv 331 " + client.getNick() + " " + channelName + " :No topic is set\r\n"));
+		sendMsg(client.getFd(), ":ircserv 332 " + client.getNick() + " " + channelName + " :" + channel.getTopic() + "\r\n");
+	}
+	if (topic[1] == ':')
+		topic = topic.substr(2);
+	else
+		topic = topic.substr(1);
+	channel.setTopic(topic);
+	channel.setTopic(topic);
+	channel.broadcast(":" + client.getNick() + "!" + client.getUser() + "@localhost TOPIC " + channelName + " :" + topic + "\r\n");
 }
 
 void Server::handleKick(Client &client, const std::string &arg)
@@ -417,7 +451,14 @@ void Server::handlePart(Client &client, const std::string &arg)
     }
 
     // Construire le message de départ
-    std::string reason = (nbWord > 1) ? vec[1] : ":" + client.getNick();
+    std::string reason;
+	if (nbWord > 1)
+	{
+		for (size_t i = 1; i < vec.size(); i++)
+			reason += vec[i] + " ";
+	}
+	else
+		reason = ":" + client.getNick();
     std::string msg = ":" + client.getNick() + "!" + client.getUser() + "@localhost PART " + channelName + " " + reason + "\r\n";
 
     // Envoyer à tous les membres y compris celui qui part
