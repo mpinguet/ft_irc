@@ -53,4 +53,5 @@ private:
 
 		std::string	getMemberList() const;
 		void		broadcast(const std::string &msg, int excludeFd = -1); //envoye un mess a tout les membres du channel
+
 };
