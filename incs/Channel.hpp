@@ -44,8 +44,8 @@ private:
 		int		getMemberCount() const;
 		const	std::map<int, Client*> &getMembers() const;
 
-		void	addOperator(Client *client); //+o 
-		void	removeOperator(int fd); //-o
+		void	addOperator(Client *client);
+		void	removeOperator(int fd);
 		bool	isOperator(int fd) const;
 
 		void	addInvited(Client *client);

@@ -117,9 +117,10 @@ bool Server::handleClientEvent(std::vector<struct pollfd> &fds, size_t &index){
 		std::cout << "recv() failed" << std::endl;
 	return false;
 }
+
 void Server::handleDisconnection(std::vector<struct pollfd> &fds, size_t index)
 {
-    int fd = fds[index].fd;
+	int fd = fds[index].fd;
     Client &client = clients.find(fd)->second;
 
     // Prévenir tous les channels où il était + le retirer
@@ -197,9 +198,9 @@ bool Server::parseCommand(Client &client, const std::string &line, std::vector<s
 		handleUser(client, arg);
 	else if (cmd == "PRIVMSG" && client.isRegistered())
 		handlePrivmsg(client, arg);
-	else if (cmd == "JOIN")
+	else if (cmd == "JOIN" && client.isRegistered())
 		handleJoin(client, arg);
-	else if (cmd == "MODE")
+	else if (cmd == "MODE" && client.isRegistered())
 		handleModes(client, arg);
 	else if (cmd == "KICK")
 		handleKick(client, arg);
@@ -557,9 +558,9 @@ void Server::handleUser(Client &client, const std::string &arg)
 	if (!client.isPassOk())
 		return sendMsg(client.getFd(), "464 :Password required\r\n");
 		
-	int param = countWords(arg);
-	if (arg.empty() || param != 4)
-		return sendMsg(client.getFd(), "461 USER :Not enough parameters\r\n");
+	// int param = countWords(arg);
+	// if (arg.empty() || param != 4)
+	// 	return sendMsg(client.getFd(), "461 USER :Not enough parameters\r\n");
 
 	std::string username = arg.substr(0, arg.find(' '));
 	client.setUser(username);
@@ -645,12 +646,6 @@ void Server::handlePrivmsg(Client &client, const std::string &arg)
 
 void Server::handleJoin(Client& client, const std::string& name)
 {
-	if(!client.isRegistered())
-	{
-		sendMsg(client.getFd(), "451 :You have not registered\r\n");
-		return;
-	}
-
 	std::string channelName = name;
 
 	std::string key;
@@ -731,10 +726,15 @@ void Server::handleModes(Client& client, const std::string& arg)
 
 	Channel &channel = _Channels[channelName];
 
+	if(!channel.isMember(client.getFd()))
+		return sendMsg(client.getFd(), ":ircsserv 442 " + client.getNick() + " " + channelName + " :Not part of the channel\r\n"); //verif le text maybe
+
 	if(!channel.isOperator(client.getFd()))
 		return sendMsg(client.getFd(), ":ircserv 482 " + client.getNick() + " " + channelName + " :You're not channel operator\r\n");
 
 	char sign = mode[0];
+	if (sign != '+' && sign != '-')
+		return sendMsg(client.getFd(), ":ircserv 472 " + client.getNick() + " " + mode + " :Unknown mode\r\n");
 	char action = mode[1];
 
 	if(action == 'i') //invite
@@ -743,7 +743,9 @@ void Server::handleModes(Client& client, const std::string& arg)
 			channel.setInviteOnly(true);
 		else
 			channel.setInviteOnly(false);
-		channel.broadcast(":ircserv MODE " + channelName + " " + mode + "\r\n");
+		// channel.broadcast(":ircserv MODE " + channelName + " " + mode + "\r\n");
+		channel.broadcast(":" + client.getNick() + "!" + client.getUser() + "@localhost MODE " + channelName + " " + mode + "\r\n");
+
 	}
 	else if(action == 't') //topic
 	{
@@ -751,7 +753,9 @@ void Server::handleModes(Client& client, const std::string& arg)
 			channel.setTopicProtected(true);
 		else
 			channel.setTopicProtected(false);
-		channel.broadcast(":ircserv MODE " + channelName + " " + mode + "\r\n");
+		// channel.broadcast(":ircserv MODE " + channelName + " " + mode + "\r\n");
+		channel.broadcast(":" + client.getNick() + "!" + client.getUser() + "@localhost MODE " + channelName + " " + mode + "\r\n");
+
 	}
 	else if(action == 'k') //password
 	{
@@ -759,13 +763,21 @@ void Server::handleModes(Client& client, const std::string& arg)
 		{
 			if (third.empty())
 				return sendMsg(client.getFd(), ":ircserv 461 MODE :Not enough parameters\r\n");
+		
+			std::string key = channel.getKey();
+			if (!key.empty())
+				return sendMsg(client.getFd(), ":ircserv 467 " + client.getNick() + " " + channelName + " :Channel key already set\r\n");
+
 			channel.setKey(third);
-			channel.broadcast(":ircserv MODE " + channelName + " " + mode + " " + third + "\r\n");
+			// channel.broadcast(":ircserv MODE " + channelName + " " + mode + " " + third + "\r\n");
+			channel.broadcast(":" + client.getNick() + "!" + client.getUser() + "@localhost MODE " + channelName + " " + mode + " " + third + "\r\n");
+
 		}
 		else
 		{
 			channel.setKey("");
-			channel.broadcast(":ircserv MODE " + channelName + " " + mode + "\r\n");
+			// channel.broadcast(":ircserv MODE " + channelName + " " + mode + "\r\n");
+			channel.broadcast(":" + client.getNick() + "!" + client.getUser() + "@localhost MODE " + channelName + " " + mode + "\r\n");
 		}
 	}
 	else if(action == 'o') //give or take channel priviledge
@@ -794,7 +806,8 @@ void Server::handleModes(Client& client, const std::string& arg)
 		else
 			channel.removeOperator(target->getFd());
 
-		channel.broadcast(":ircserv MODE " + channelName + " " + mode + " " + third + "\r\n");
+		// channel.broadcast(":ircserv MODE " + channelName + " " + mode + " " + third + "\r\n");
+		channel.broadcast(":" + client.getNick() + "!" + client.getUser() + "@localhost MODE " + channelName + " " + mode + " " + third + "\r\n");
 	}
 	else if(action == 'l') //user limit
 	{
@@ -803,30 +816,19 @@ void Server::handleModes(Client& client, const std::string& arg)
 			if (third.empty())
 				return sendMsg(client.getFd(), ":ircserv 461 MODE :Not enough parameters\r\n");
 			channel.setUserLimit(atoi(third.c_str()));
-			channel.broadcast(":ircserv MODE " + channelName + " " + mode + " " + third + "\r\n");
+			// channel.broadcast(":ircserv MODE " + channelName + " " + mode + " " + third + "\r\n");
+			channel.broadcast(":" + client.getNick() + "!" + client.getUser() + "@localhost MODE " + channelName + " " + mode + " " + third + "\r\n");
 		}
 		else
 		{
 			channel.setUserLimit(-1);
-			channel.broadcast(":ircserv MODE " + channelName + " " + mode + "\r\n");
+			// channel.broadcast(":ircserv MODE " + channelName + " " + mode + "\r\n");
+			channel.broadcast(":" + client.getNick() + "!" + client.getUser() + "@localhost MODE " + channelName + " " + mode + "\r\n");
 		}
 	}
 	else 
 		sendMsg(client.getFd(), ":ircserv 472 :Unknown Mode\r\n"); //472 ERR_UNKNOWNMODE
-
 }
-
-//TEST DONE :
-//Can add administrator role and take it out
-//only administrator can MODE
-//USER limit and invite only work, invite not sent but cannot join if the channel is invite only
-//Password works too
-
-
-
-//MODE
-//i t k o l avec + et - a chaque fois donc 10 retour a faire.
-// a verifier MODE marque les options maybe done with hexchat
 
 void Server::sendWelcome(Client &client)
 {
@@ -840,16 +842,3 @@ void Server::sendMsg(int fd, const std::string &msg)
 {
 	send(fd, msg.c_str(), msg.size(), 0);
 }
-
-
-//parsing channel name 
-//mode only for ops
-// channel only created zithout mdp and need to mode after to add pass
-
-
-
-//parsing channel name 
-//mode only for ops
-// channel only created zithout mdp and need to mode after to add pass
-
-

@@ -25,7 +25,7 @@ private:
 	std::string password;
 	int server_fd;
 
-	std::map<int, Client>	clients; //map pour stocker les clients connectés, nickname etc
+	std::map<int, Client>	clients;
 	std::map<std::string, Channel> _Channels;
 
 public:
@@ -58,8 +58,4 @@ public:
 
 	//Modes
 	void handleModes(Client &client, const std::string &arg);
-
-	//Modes
-	void handleModes(Client &client, const std::string &arg);
-
 };
