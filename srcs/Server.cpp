@@ -202,8 +202,6 @@ bool Server::parseCommand(Client &client, const std::string &line, std::vector<s
 		handleJoin(client, arg);
 	else if (cmd == "MODE" && client.isRegistered())
 		handleModes(client, arg);
-	else if (cmd == "TOPIC" && client.isRegistered())
-		handleTopic(client, arg);
 	else if (cmd == "KICK")
 		handleKick(client, arg);
 	else if (cmd == "TOPIC" && client.isRegistered())
@@ -220,42 +218,42 @@ bool Server::parseCommand(Client &client, const std::string &line, std::vector<s
 	else
 	{
 		if (!client.isRegistered())
-			sendMsg(client.getFd(), "451 :You have not registered\r\n");
+			sendMsg(client.getFd(), ":ircserv 451 :You have not registered\r\n");
 		else
-			sendMsg(client.getFd(), "421 " + cmd + " :Unknown command\r\n");
+			sendMsg(client.getFd(), ":ircserv 421 " + client.getNick() + " " + cmd + " :Unknown command\r\n");
 	}
 	return false;
 }
 
-void Server::handleTopic(Client& client, const std::string &arg){
-	std::istringstream iss(arg);
-	std::string channelName, topic;
+// void Server::handleTopic(Client& client, const std::string &arg){
+// 	std::istringstream iss(arg);
+// 	std::string channelName, topic;
 
-	iss >> channelName;
-	std::getline(iss, topic);
-	std::map<std::string, Channel>::iterator chIt = _Channels.find(channelName);
-	if (chIt == _Channels.end())
-		return (sendMsg(client.getFd(), "403 " +client.getNick() + channelName + " :No such channel\r\n"));
+// 	iss >> channelName;
+// 	std::getline(iss, topic);
+// 	std::map<std::string, Channel>::iterator chIt = _Channels.find(channelName);
+// 	if (chIt == _Channels.end())
+// 		return (sendMsg(client.getFd(), "403 " +client.getNick() + channelName + " :No such channel\r\n"));
 
-	Channel& channel = _Channels[channelName];
+// 	Channel& channel = _Channels[channelName];
 
-	if (!channel.isMember(client.getFd()))
-		return sendMsg(client.getFd(), ":ircsserv 442 " + client.getNick() + " " + channelName + " :Not part of the channel\r\n"); //verif le text maybe
-	else if (channel.isTopicProtected()){
-		if (!channel.isOperator(client.getFd()))
-		return sendMsg(client.getFd(), ":ircserv 482 " + client.getNick() + " " + channelName + " :You're not channel operator\r\n");
-	}
-	if (topic.empty()){
-		if (channel.getTopic().empty())
-			return sendMsg(client.getFd(), ":ircserv 331 " + client.getNick() + " " + channelName + " :No topic is set\r\n");
-		return (sendMsg(client.getFd(), channel.getTopic() + "\r\n"));
-	}
-	if (topic[1] == ':')
-		topic = topic.substr(2);
-	else
-		topic = topic.substr(1);
-	channel.setTopic(topic);
-}
+// 	if (!channel.isMember(client.getFd()))
+// 		return sendMsg(client.getFd(), ":ircsserv 442 " + client.getNick() + " " + channelName + " :Not part of the channel\r\n"); //verif le text maybe
+// 	else if (channel.isTopicProtected()){
+// 		if (!channel.isOperator(client.getFd()))
+// 		return sendMsg(client.getFd(), ":ircserv 482 " + client.getNick() + " " + channelName + " :You're not channel operator\r\n");
+// 	}
+// 	if (topic.empty()){
+// 		if (channel.getTopic().empty())
+// 			return sendMsg(client.getFd(), ":ircserv 331 " + client.getNick() + " " + channelName + " :No topic is set\r\n");
+// 		return (sendMsg(client.getFd(), channel.getTopic() + "\r\n"));
+// 	}
+// 	if (topic[1] == ':')
+// 		topic = topic.substr(2);
+// 	else
+// 		topic = topic.substr(1);
+// 	channel.setTopic(topic);
+// }
 
 int find_client(std::map<int, Client> &clients, std::string &name)
 {
@@ -709,18 +707,22 @@ void Server::handlePrivmsg(Client &client, const std::string &arg)
 		sendMsg(client.getFd(), ":ircserv 401 " + client.getNick() + " " + target + " :No such nick/channel\r\n");
 		return;
 	}
-
 	sendMsg(target_fd, fullMsg);
 }
 
 void Server::handleJoin(Client& client, const std::string& name)
 {
-	std::string channelName = name;
+	if (name.empty())
+	{
+		sendMsg(client.getFd(), ":ircserv 461 " + client.getNick() + " JOIN :Not enough parameters\r\n");
+		return;
+	}
 
+	std::string channelName = name;
 	std::string key;
 	size_t space = name.find(' ');
 
-	if (space == std::string::npos) //verifie si mdp for channel +k et parse
+	if (space == std::string::npos)
 		channelName = name;
 	else
 	{
@@ -729,7 +731,7 @@ void Server::handleJoin(Client& client, const std::string& name)
 	}
 
 	if (channelName[0] != '#'){
-		sendMsg(client.getFd(), "ERROR: channel name must start with '#'\r\n");
+		sendMsg(client.getFd(), ":ircserv 476 " + client.getNick() + " " + channelName + " :Bad channel mask\r\n");
 		return;
 	}
 
@@ -737,7 +739,6 @@ void Server::handleJoin(Client& client, const std::string& name)
 	{
 		_Channels[channelName] = Channel(channelName);
 		_Channels[channelName].addOperator(&clients.find(client.getFd())->second);
-		std::cout << "MESS DEBUG: CHANNEL CREATED" << std::endl;
 	}
 
 	Channel &channel = _Channels[channelName];
