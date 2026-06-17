@@ -4,6 +4,7 @@ SOURCES =	srcs/main.cpp \
 			srcs/Server.cpp \
 			srcs/Client.cpp \
 			srcs/Channel.cpp \
+			srcs/Marvin.cpp \
 
 GCC = c++
 

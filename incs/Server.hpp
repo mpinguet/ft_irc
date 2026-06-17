@@ -13,8 +13,10 @@
 #include <vector>
 #include <map>
 #include <sstream>
+#include <ctime>
 #include "Client.hpp"
 #include "Channel.hpp"
+#include "Marvin.hpp"
 
 class Channel;
 
@@ -54,6 +56,10 @@ public:
 	void	handlePrivmsg(Client &client, const std::string &arg);
 	void	handleQuit(Client &client, const std::string &arg, std::vector<struct pollfd> &fds);
 	void	handleTopic(Client& client, const std::string &arg);
+	void	handleBot(Client& client, std::string arg);
+	void	handleFacts(Marvin& marvin, std::string name);
+
+	std::vector<std::string> dataFacts();
 
 
 	void	sendWelcome(Client &client);

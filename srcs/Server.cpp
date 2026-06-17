@@ -1,3 +1,15 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   Server.cpp                                         :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: levincen <levincen@student.42.fr>          +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2026/06/17 16:26:45 by levincen          #+#    #+#             */
+/*   Updated: 2026/06/17 18:28:20 by levincen         ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
 #include "../incs/Server.hpp"
 
 Server::Server(int _port, std::string _password)
@@ -15,6 +27,8 @@ Server::~Server()
 
 void Server::init()
 {
+	srand(time(NULL));
+
 	this->server_fd = socket(AF_INET, SOCK_STREAM, 0); // socket(AdressFromTheInternet(IPV4), TCP/IP)
 	if (server_fd == -1)
 		throw (std::runtime_error("socket() failed"));
@@ -121,26 +135,26 @@ bool Server::handleClientEvent(std::vector<struct pollfd> &fds, size_t &index){
 void Server::handleDisconnection(std::vector<struct pollfd> &fds, size_t index)
 {
 	int fd = fds[index].fd;
-    Client &client = clients.find(fd)->second;
+	Client &client = clients.find(fd)->second;
 
-    // Prévenir tous les channels où il était + le retirer
-    for (std::map<std::string, Channel>::iterator it = _Channels.begin(); it != _Channels.end(); )
-    {
-        if (it->second.isMember(fd))
-        {
-            it->second.broadcast(":" + client.getNick() + "!" + client.getUser() + "@localhost QUIT :Connection closed\r\n");
-            it->second.removeMember(fd);
-        }
-        if (it->second.getMemberCount() == 0)
-            _Channels.erase(it++);
-        else
-            ++it;
-    }
+	// Prévenir tous les channels où il était + le retirer
+	for (std::map<std::string, Channel>::iterator it = _Channels.begin(); it != _Channels.end(); )
+	{
+		if (it->second.isMember(fd))
+		{
+			it->second.broadcast(":" + client.getNick() + "!" + client.getUser() + "@localhost QUIT :Connection closed\r\n");
+			it->second.removeMember(fd);
+		}
+		if (it->second.getMemberCount() == 0)
+			_Channels.erase(it++);
+		else
+			++it;
+	}
 
-    std::cout << "Deconnection of client #" << fd << std::endl;
-    close(fd);
-    clients.erase(fd);
-    fds.erase(fds.begin() + index);
+	std::cout << "Deconnection of client #" << fd << std::endl;
+	close(fd);
+	clients.erase(fd);
+	fds.erase(fds.begin() + index);
 }
 
 // ----------------------------------
@@ -210,6 +224,8 @@ bool Server::parseCommand(Client &client, const std::string &line, std::vector<s
 		handlePart(client, arg);
 	else if (cmd == "INVITE" && client.isRegistered())
 		handleInvite(client, arg);
+	else if (cmd == "MARVIN" && client.isRegistered())
+		handleBot(client, arg);
 	else if (cmd == "QUIT" && client.isRegistered())
 	{
 		handleQuit(client, arg, fds);
@@ -225,8 +241,46 @@ bool Server::parseCommand(Client &client, const std::string &line, std::vector<s
 	return false;
 }
 
-int find_client(std::map<int, Client> &clients, std::string &name)
-{
+void Server::handleFacts(Marvin& marvin, std::string name){
+	Channel& channel = _Channels[name];
+
+	std::vector<std::string> facts = marvin.getFacts();
+	if (!facts.empty())
+	{
+		int randomIndex = rand() % facts.size();
+		std::string fact = facts[randomIndex];
+		channel.broadcast(":" + marvin.getName() + "!" + marvin.getName() + "@localhost PRIVMSG " + name + " :" + fact + "\r\n");
+	}
+}
+
+void Server::handleBot(Client& client, std::string arg){
+	std::istringstream iss(arg);
+	std::string clientQuestion, channelName;
+
+	iss >> channelName >> clientQuestion;
+	std::map<std::string, Channel>::iterator chIt = _Channels.find(channelName);
+	if (chIt == _Channels.end())
+		return (sendMsg(client.getFd(), "403 " +client.getNick() + " " + channelName + " :No such channel\r\n"));
+
+	Channel& channel = _Channels[channelName];
+
+	if (!channel.isMember(client.getFd()))
+		return (sendMsg(client.getFd(), ":ircserv 442 " + client.getNick() + " " + channelName + " :You're not on that channel\r\n"));
+	if (clientQuestion.empty())
+		return (sendMsg(client.getFd(), "Please precise if you want a FACT or the HOUR\r\n"));
+
+	Marvin marvin;
+    if (clientQuestion == "HOUR"){
+        std::time_t result = std::time(NULL);
+        std::string hour = std::asctime(std::localtime(&result));
+		hour = hour.substr(0, hour.length() - 1);
+        channel.broadcast(":" + marvin.getName() + "!" + marvin.getName() + "@localhost PRIVMSG " + channelName + " :" + hour + "\r\n");
+    }
+	else if (clientQuestion == "FACT")
+		handleFacts(marvin, channelName);
+}
+
+int find_client(std::map<int, Client> &clients, std::string &name){
 	std::map<int, Client>::const_iterator it;
 	for (it = clients.begin(); it != clients.end(); ++it)
 	{
@@ -239,30 +293,30 @@ int find_client(std::map<int, Client> &clients, std::string &name)
 int countWords(const std::string& str) {
 	if (str.empty())
 		return (0);
-    std::istringstream iss(str);
-    std::string word;
-    int count = 0;
+	std::istringstream iss(str);
+	std::string word;
+	int count = 0;
 
-    while (iss >> word) {
-        count++;
-    }
-    return count;
+	while (iss >> word) {
+		count++;
+	}
+	return count;
 }
 
 int countWordPart(std::vector<std::string> &vec, const std::string &str)
 {
 	if (str.empty())
 		return (0);
-    std::istringstream iss(str);
+	std::istringstream iss(str);
 
-    std::string word;
-    int count = 0;
+	std::string word;
+	int count = 0;
 
-    while (iss >> word) {
+	while (iss >> word) {
 		vec.push_back(word);
-        count++;
-    }
-    return count;
+		count++;
+	}
+	return count;
 }
 
 void	Server::handleQuit(Client &client, const std::string &arg, std::vector<struct pollfd> &fds)
@@ -273,29 +327,29 @@ void	Server::handleQuit(Client &client, const std::string &arg, std::vector<stru
 	std::string msg = ":" + client.getNick() + "!" + client.getUser() + "@localhost QUIT :" + reason + "\r\n";
 
    for (std::map<std::string, Channel>::iterator it = _Channels.begin(); it != _Channels.end(); )
-    {
-        if (it->second.isMember(client.getFd()))
-        {
-            it->second.broadcast(msg);
-            it->second.removeMember(client.getFd());
-        }
-        if (it->second.isEmpty())
-            _Channels.erase(it++);
-        else
-            ++it;
-    }
+	{
+		if (it->second.isMember(client.getFd()))
+		{
+			it->second.broadcast(msg);
+			it->second.removeMember(client.getFd());
+		}
+		if (it->second.isEmpty())
+			_Channels.erase(it++);
+		else
+			++it;
+	}
 
-    // Retirer de _fds
-    for (size_t i = 0; i < fds.size(); i++)
-    {
-        if (fds[i].fd == client.getFd())
-        {
-            fds.erase(fds.begin() + i);
-            break;
-        }
-    }
+	// Retirer de _fds
+	for (size_t i = 0; i < fds.size(); i++)
+	{
+		if (fds[i].fd == client.getFd())
+		{
+			fds.erase(fds.begin() + i);
+			break;
+		}
+	}
 	close(client.getFd());
-    clients.erase(client.getFd());
+	clients.erase(client.getFd());
 }
 
 void Server::handleTopic(Client& client, const std::string &arg){
@@ -423,35 +477,35 @@ void Server::handleKick(Client &client, const std::string &arg)
 
 void Server::handlePart(Client &client, const std::string &arg)
 {
-    std::vector<std::string> vec;
-    int nbWord = countWordPart(vec, arg);
+	std::vector<std::string> vec;
+	int nbWord = countWordPart(vec, arg);
 
-    if (nbWord == 0)
-    {
-        sendMsg(client.getFd(), ":ircserv 461 " + client.getNick() + " PART :Not enough parameters\r\n");
-        return;
-    }
+	if (nbWord == 0)
+	{
+		sendMsg(client.getFd(), ":ircserv 461 " + client.getNick() + " PART :Not enough parameters\r\n");
+		return;
+	}
 
-    std::string channelName = vec[0];
+	std::string channelName = vec[0];
 
-    // Chercher le channel
-    if (_Channels.find(channelName) == _Channels.end())
-    {
-        sendMsg(client.getFd(), ":ircserv 403 " + client.getNick() + " " + channelName + " :No such channel\r\n");
-        return;
-    }
+	// Chercher le channel
+	if (_Channels.find(channelName) == _Channels.end())
+	{
+		sendMsg(client.getFd(), ":ircserv 403 " + client.getNick() + " " + channelName + " :No such channel\r\n");
+		return;
+	}
 
-    Channel &channel = _Channels[channelName];
+	Channel &channel = _Channels[channelName];
 
-    // Vérifier que le client est membre
-    if (!channel.isMember(client.getFd()))
-    {
-        sendMsg(client.getFd(), ":ircserv 442 " + client.getNick() + " " + channelName + " :You're not on that channel\r\n");
-        return;
-    }
+	// Vérifier que le client est membre
+	if (!channel.isMember(client.getFd()))
+	{
+		sendMsg(client.getFd(), ":ircserv 442 " + client.getNick() + " " + channelName + " :You're not on that channel\r\n");
+		return;
+	}
 
-    // Construire le message de départ
-    std::string reason;
+	// Construire le message de départ
+	std::string reason;
 	if (nbWord > 1)
 	{
 		for (size_t i = 1; i < vec.size(); i++)
@@ -459,17 +513,17 @@ void Server::handlePart(Client &client, const std::string &arg)
 	}
 	else
 		reason = ":" + client.getNick();
-    std::string msg = ":" + client.getNick() + "!" + client.getUser() + "@localhost PART " + channelName + " " + reason + "\r\n";
+	std::string msg = ":" + client.getNick() + "!" + client.getUser() + "@localhost PART " + channelName + " " + reason + "\r\n";
 
-    // Envoyer à tous les membres y compris celui qui part
-    channel.broadcast(msg, -1);
+	// Envoyer à tous les membres y compris celui qui part
+	channel.broadcast(msg, -1);
 
-    // Retirer le membre
-    channel.removeMember(client.getFd());
+	// Retirer le membre
+	channel.removeMember(client.getFd());
 
-    // Supprimer le channel s'il est vide
-    if (channel.isEmpty())
-        _Channels.erase(channelName);
+	// Supprimer le channel s'il est vide
+	if (channel.isEmpty())
+		_Channels.erase(channelName);
 }
 
 void Server::handlePass(Client &client, const std::string &arg)
@@ -593,7 +647,7 @@ void Server::handleUser(Client &client, const std::string &arg)
 {
 	if (!client.isPassOk())
 		return sendMsg(client.getFd(), "464 :Password required\r\n");
-		
+
 	// int param = countWords(arg);
 	// if (arg.empty() || param != 4)
 	// 	return sendMsg(client.getFd(), "461 USER :Not enough parameters\r\n");
@@ -800,7 +854,7 @@ void Server::handleModes(Client& client, const std::string& arg)
 		{
 			if (third.empty())
 				return sendMsg(client.getFd(), ":ircserv 461 MODE :Not enough parameters\r\n");
-		
+
 			std::string key = channel.getKey();
 			if (!key.empty())
 				return sendMsg(client.getFd(), ":ircserv 467 " + client.getNick() + " " + channelName + " :Channel key already set\r\n");
