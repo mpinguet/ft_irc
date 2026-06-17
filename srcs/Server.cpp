@@ -325,7 +325,6 @@ void Server::handleTopic(Client& client, const std::string &arg){
 	else
 		topic = topic.substr(1);
 	channel.setTopic(topic);
-	channel.setTopic(topic);
 	channel.broadcast(":" + client.getNick() + "!" + client.getUser() + "@localhost TOPIC " + channelName + " :" + topic + "\r\n");
 }
 
