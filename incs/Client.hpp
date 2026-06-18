@@ -19,7 +19,7 @@ class Client
 		Client();
 		~Client();
 
-		//les getters
+		//getters
 		std::string getNick() const;
 		std::string getPass() const;
 		std::string getUser() const;
@@ -30,7 +30,7 @@ class Client
 		bool		isUserOk()  const;
 		bool		isRegistered() const;
 
-		//les setters
+		//setters
 		void setPass(const std::string &p);
 		void setNick(const std::string &n);
 		void setUser(const std::string &u);

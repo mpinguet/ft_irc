@@ -29,7 +29,7 @@ private:
 		const std::string &getTopic() const;
 		bool	isInviteOnly() const ;
 		bool	isTopicProtected()const ;
-        int		getUserLimit()const ;
+		int		getUserLimit()const ;
 
 		void	setKey(const std::string &key);
 		void	setTopic(const std::string &topic);
@@ -52,6 +52,6 @@ private:
 		bool	isInvited(int fd) const;
 
 		std::string	getMemberList() const;
-		void		broadcast(const std::string &msg, int excludeFd = -1); //envoye un mess a tout les membres du channel
+		void		broadcast(const std::string &msg, int excludeFd = -1);
 
 };

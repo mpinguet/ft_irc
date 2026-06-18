@@ -72,7 +72,6 @@ bool Channel::isOperator(int fd) const
 	return it != operators.end();
 }
 
-//invite
 
 void Channel::addInvited(Client *client)
 {
@@ -97,7 +96,7 @@ std::string Channel::getMemberList() const
 		list += it->second->getNick();
 	}
 	return list;
-} // message 353 liste les membres du channel, apparait apres JOIN
+}
 
 void Channel::broadcast(const std::string &msg, int excludeFd)
 {

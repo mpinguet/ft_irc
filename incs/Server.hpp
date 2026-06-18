@@ -19,6 +19,7 @@
 #include "Marvin.hpp"
 
 class Channel;
+class Marvin;
 
 class Server
 {
@@ -46,8 +47,8 @@ public:
 	void handleKick(Client &client, const std::string &arg);
 	void handleInvite(Client &client, const std::string &arg);
 
-	// Parsing line
-	void	parseCommand(Client &client, const std::string &line);
+	// // Parsing line
+	// void	parseCommand(Client &client, const std::string &line);
 	// Parsing line
 	bool	parseCommand(Client &client, const std::string &line, std::vector<struct pollfd> &fds);
 	void	handlePass(Client &client, const std::string &arg);
