@@ -9,8 +9,18 @@
 #include <netinet/in.h>
 #include <cstdlib>
 #include <unistd.h>
+#include <csignal>
 #include <poll.h>
 #include <vector>
+#include <map>
+#include <sstream>
+#include <ctime>
+#include "Client.hpp"
+#include "Channel.hpp"
+#include "Marvin.hpp"
+
+class Channel;
+class Marvin;
 
 class Server
 {
@@ -18,9 +28,46 @@ private:
 	int port;
 	std::string password;
 	int server_fd;
+
+	static volatile bool running;
+
+	std::map<int, Client>	clients;
+	std::map<std::string, Channel> _Channels;
+
+	static void sigHandler(int);
+
+
 public:
 	Server(int , std::string );
 	~Server();
 	void init();
 	void run();
+
+	void newClient(int &client_nb, std::vector<struct pollfd> &fds, int client_fd);
+	void handleServerEvent(int &client_nb, std::vector<struct pollfd> &fds);
+	bool handleClientEvent(std::vector<struct pollfd> &fds, size_t &index);
+	void handleDisconnection(std::vector<struct pollfd> &fds, size_t index);
+	bool handleData(char *buff, int byte, std::vector<struct pollfd> &fds, size_t index);
+	void handleJoin(Client& client, const std::string& name);
+	void handlePart(Client &client, const std::string &arg);
+	void handleKick(Client &client, const std::string &arg);
+	void handleInvite(Client &client, const std::string &arg);
+
+	bool	parseCommand(Client &client, const std::string &line, std::vector<struct pollfd> &fds);
+	void	handlePass(Client &client, const std::string &arg);
+	void	handleNick(Client &client, const std::string &arg);
+	void	handleUser(Client &client, const std::string &arg);
+	void	handlePrivmsg(Client &client, const std::string &arg);
+	void	handleQuit(Client &client, const std::string &arg, std::vector<struct pollfd> &fds);
+	void	handleTopic(Client& client, const std::string &arg);
+	void	handleBot(Client& client, std::string arg);
+	void	handleFacts(Marvin& marvin, std::string name);
+
+	std::vector<std::string> dataFacts();
+
+
+	void	sendWelcome(Client &client);
+	void	sendMsg(int fd, const std::string &msg);
+
+	void handleModes(Client &client, const std::string &arg);
 };

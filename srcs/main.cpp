@@ -1,4 +1,5 @@
 #include "../incs/Server.hpp"
+#include <csignal>
 
 
 bool parse_first_command(int argc, char **argv)
@@ -26,6 +27,7 @@ bool parse_first_command(int argc, char **argv)
 	}
 	return true;
 }
+
 int main(int argc, char **argv)
 {
 	if (!parse_first_command(argc, argv))

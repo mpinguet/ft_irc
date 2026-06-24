@@ -1,11 +1,14 @@
 NAME = ircserv
 
-SOURCES = srcs/main.cpp \
-		srcs/Server.cpp
+SOURCES =	srcs/main.cpp \
+			srcs/Server.cpp \
+			srcs/Client.cpp \
+			srcs/Channel.cpp \
+			srcs/Marvin.cpp \
 
 GCC = c++
 
-FLAGS = -Wall -Wextra -Werror -std=c++98
+FLAGS = -Wall -Wextra -Werror -std=c++98 -g3
 
 OBJS = ${SOURCES:.cpp=.o}
 
