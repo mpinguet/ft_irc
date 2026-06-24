@@ -54,8 +54,6 @@ const std::map<int, Client*> &Channel::getMembers() const
 	return members;
 }
 
-// op
-
 void Channel::addOperator(Client *client)
 {
 	operators[client->getFd()] = client;
@@ -71,7 +69,6 @@ bool Channel::isOperator(int fd) const
 	std::map<int, Client*>::const_iterator it = operators.find(fd);
 	return it != operators.end();
 }
-
 
 void Channel::addInvited(Client *client)
 {

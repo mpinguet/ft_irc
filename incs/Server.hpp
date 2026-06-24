@@ -9,6 +9,7 @@
 #include <netinet/in.h>
 #include <cstdlib>
 #include <unistd.h>
+#include <csignal>
 #include <poll.h>
 #include <vector>
 #include <map>
@@ -28,8 +29,13 @@ private:
 	std::string password;
 	int server_fd;
 
+	static volatile bool running;
+
 	std::map<int, Client>	clients;
 	std::map<std::string, Channel> _Channels;
+
+	static void sigHandler(int);
+
 
 public:
 	Server(int , std::string );
@@ -47,9 +53,6 @@ public:
 	void handleKick(Client &client, const std::string &arg);
 	void handleInvite(Client &client, const std::string &arg);
 
-	// // Parsing line
-	// void	parseCommand(Client &client, const std::string &line);
-	// Parsing line
 	bool	parseCommand(Client &client, const std::string &line, std::vector<struct pollfd> &fds);
 	void	handlePass(Client &client, const std::string &arg);
 	void	handleNick(Client &client, const std::string &arg);
@@ -66,6 +69,5 @@ public:
 	void	sendWelcome(Client &client);
 	void	sendMsg(int fd, const std::string &msg);
 
-	//Modes
 	void handleModes(Client &client, const std::string &arg);
 };

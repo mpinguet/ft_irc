@@ -8,7 +8,7 @@ SOURCES =	srcs/main.cpp \
 
 GCC = c++
 
-FLAGS = -Wall -Wextra -Werror -std=c++98
+FLAGS = -Wall -Wextra -Werror -std=c++98 -g3
 
 OBJS = ${SOURCES:.cpp=.o}
 
